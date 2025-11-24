@@ -1,0 +1,178 @@
+{
+  "app": {
+    "name": "AI Trading Bot",
+    "version": "1.0.0",
+    "environment": "development",
+    "timezone": "UTC",
+    "debug": true,
+    "enabled": true,
+    "shutdown_timeout": 30000000000,
+    "max_goroutines": 100
+  },
+  "trading": {
+    "initial_balance": 10000,
+    "max_daily_loss": 500,
+    "max_consecutive_losses": 5,
+    "default_leverage": 5,
+    "max_leverage": 10,
+    "min_position_size": 0.001,
+    "max_position_size": 1,
+    "maker_fee": 0.0002,
+    "taker_fee": 0.0006,
+    "slippage": 0.0005,
+    "execution_type": "simulation",
+    "order_timeout": 30000000000,
+    "retry_attempts": 3,
+    "retry_delay": 1000000000,
+    "supported_symbols": [
+      "BTCUSDT"
+    ],
+    "default_symbol": "BTCUSDT",
+    "max_symbols": 1
+  },
+  "strategy": {
+    "grid": {
+      "min_grid_spacing": 0.0025,
+      "max_grid_spacing": 0.01,
+      "min_grid_levels": 10,
+      "max_grid_levels": 30,
+      "min_profit_per_level": 0.0015,
+      "target_roi": 0.01,
+      "history_window": 200,
+      "volatility_lookback": 100,
+      "min_data_points": 50,
+      "price_buffer": 0.05,
+      "range_expansion": 2
+    },
+    "breakout": {
+      "confirmation_candles": 3,
+      "min_breakout_strength": 0.003,
+      "volume_multiplier": 1.5,
+      "min_volume_candles": 10,
+      "momentum_threshold": 0.005,
+      "rsi_overbought": 70,
+      "rsi_oversold": 30,
+      "atr_multiple": 1.5,
+      "max_false_breakouts": 3,
+      "confidence_threshold": 0.6
+    },
+    "false_breakout": {
+      "price_reversion_threshold": 0.005,
+      "strong_reversal_threshold": 0.01,
+      "confirmation_candles": 3,
+      "volume_decline_threshold": 0.5,
+      "momentum_reversal_ms": 900,
+      "atr_multiple": 1.5,
+      "std_dev_multiplier": 2,
+      "max_fakeout_frequency": 5
+    },
+    "stability": {
+      "analysis_window": 10,
+      "volatility_threshold": 0.005,
+      "momentum_threshold": 0.002,
+      "price_conformity": 0.8,
+      "range_contraction": 0.7,
+      "min_stability_periods": 3,
+      "primary_timeframe": "3s",
+      "secondary_timeframe": "15s",
+      "low_risk_volatility": 0.003,
+      "medium_risk_volatility": 0.007,
+      "high_risk_volatility": 0.007
+    },
+    "technical": {
+      "indicator_settings": {
+        "atr_period": 14,
+        "bb_period": 20,
+        "bb_stddev": 2,
+        "ema_period": 20,
+        "macd_fast": 12,
+        "macd_signal": 9,
+        "macd_slow": 26,
+        "rsi_period": 14,
+        "sma_period": 20
+      },
+      "analysis_timeframes": [
+        "1s",
+        "3s",
+        "15s"
+      ],
+      "min_history_candles": 50,
+      "max_history_candles": 200,
+      "indicator_update_interval": 1000000000
+    }
+  },
+  "risk": {
+    "max_portfolio_risk": 0.05,
+    "max_drawdown": 0.1,
+    "max_correlation": 0.7,
+    "max_position_risk": 0.02,
+    "min_risk_reward_ratio": 1.5,
+    "concentration_limit": 0.3,
+    "volatility_multiplier": 1.5,
+    "risk_assessment_interval": 60000000000,
+    "margin_call_threshold": 0.9,
+    "emergency_stop_loss": 0.15
+  },
+  "stream": {
+    "provider_type": "simulation",
+    "connect_timeout": 10000000000,
+    "read_timeout": 30000000000,
+    "write_timeout": 10000000000,
+    "ping_interval": 20000000000,
+    "reconnect_delay": 5000000000,
+    "max_reconnects": 5,
+    "buffer_size": 1000,
+    "batch_size": 100,
+    "batch_timeout": 1000000000,
+    "simulation_speed": 1,
+    "random_volatility": 0.1
+  },
+  "database": {
+    "driver": "sqlite",
+    "host": "",
+    "port": 0,
+    "database": "trading_bot.db",
+    "username": "",
+    "password": "",
+    "max_open_conns": 25,
+    "max_idle_conns": 5,
+    "conn_max_lifetime": 300000000000,
+    "ssl_mode": "disable",
+    "timezone": "UTC"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "output": "both",
+    "directory": "./logs",
+    "max_size": 100,
+    "max_backups": 10,
+    "max_age": 30,
+    "compress": true,
+    "flush_interval": 5000000000,
+    "buffer_size": 1000,
+    "enable_structured": true,
+    "fields": [
+      "timestamp",
+      "level",
+      "component",
+      "message",
+      "symbol",
+      "price",
+      "pnl"
+    ]
+  },
+  "backtest": {
+    "data_directory": "",
+    "start_time": "0001-01-01T00:00:00Z",
+    "end_time": "0001-01-01T00:00:00Z",
+    "initial_balance": 10000,
+    "commission": 0.0004,
+    "slippage": 0.0005,
+    "latency": 50000000,
+    "results_directory": "./backtest_results",
+    "detailed_reports": true,
+    "generate_charts": true,
+    "export_trades": true
+  }
+}
