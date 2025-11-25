@@ -5,7 +5,6 @@
     "environment": "development",
     "timezone": "UTC",
     "debug": true,
-    "enabled": true,
     "shutdown_timeout": 30000000000,
     "max_goroutines": 100
   },
@@ -20,7 +19,7 @@
     "maker_fee": 0.0002,
     "taker_fee": 0.0006,
     "slippage": 0.0005,
-    "execution_type": "simulation",
+    "execution_type": "live",
     "order_timeout": 30000000000,
     "retry_attempts": 3,
     "retry_delay": 1000000000,
@@ -114,7 +113,7 @@
     "emergency_stop_loss": 0.15
   },
   "stream": {
-    "provider_type": "simulation",
+    "provider_type": "live",
     "connect_timeout": 10000000000,
     "read_timeout": 30000000000,
     "write_timeout": 10000000000,
@@ -123,9 +122,7 @@
     "max_reconnects": 5,
     "buffer_size": 1000,
     "batch_size": 100,
-    "batch_timeout": 1000000000,
-    "simulation_speed": 1,
-    "random_volatility": 0.1
+    "batch_timeout": 1000000000
   },
   "database": {
     "driver": "sqlite",
@@ -161,7 +158,7 @@
       "price",
       "pnl"
     ]
-  },
+},
   "backtest": {
     "data_directory": "./data",
     "start_time": "2020-01-01T00:00:00Z",

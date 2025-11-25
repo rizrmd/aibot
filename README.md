@@ -1,6 +1,6 @@
 # AI Trading Bot
 
-A sophisticated cryptocurrency trading bot that combines grid trading with breakout detection, featuring advanced risk management, false breakout protection, and comprehensive backtesting capabilities.
+A sophisticated cryptocurrency trading bot that combines grid trading with breakout detection, featuring advanced risk management, false breakout protection, and comprehensive streaming capabilities with historical replay.
 
 ## 🚀 Features
 
@@ -24,7 +24,7 @@ A sophisticated cryptocurrency trading bot that combines grid trading with break
 
 ### Infrastructure
 - **Real-time Data**: WebSocket streaming with 300ms update intervals
-- **Simulation Environment**: Comprehensive backtesting with historical data
+- **Replay Environment**: Comprehensive historical data replay with realistic trading simulation
 - **Configuration Management**: JSON-based configuration with validation
 - **Structured Logging**: Comprehensive logging with performance metrics
 
@@ -153,27 +153,34 @@ The bot uses a JSON configuration file (`config.json`) that is automatically cre
 - **Volatility Analysis**: Adaptive volatility thresholds
 - **Range Contraction**: Detects price consolidation patterns
 
-## 📊 Backtesting
+## 📊 Historical Replay
 
-### Running Backtests
+### Running Historical Replay
 ```bash
-# Quick backtest with sample data
-make backtest-quick
+# Run with historical data replay
+make run
 
-# Full backtest with custom data
-make backtest
-
-# Backtest with custom date range
-./build/trading-bot -config config.json -backtest -start-date "2023-01-01" -end-date "2023-12-31"
+# Configure replay mode in config.json:
+# {
+#   "stream": {
+#     "provider_type": "replay",
+#     "data_source": {
+#       "type": "file",
+#       "directory": "./historical_data",
+#       "start_time": "2024-01-01T00:00:00Z",
+#       "end_time": "2024-12-31T23:59:59Z"
+#     }
+#   }
+# }
 ```
 
-### Backtesting Features
+### Replay Features
 - **Historical Data**: CSV format OHLCV data support
-- **Realistic Simulation**: Commission, slippage, and latency modeling
-- **Performance Metrics**: Sharpe ratio, sortino ratio, maximum drawdown
+- **Realistic Trading**: Commission, slippage, and latency modeling
+- **Performance Metrics**: Real-time P&L tracking and risk monitoring
 - **Trade Export**: Detailed trade logs in CSV format
-- **Equity Curves**: Visual performance tracking
-- **Optimization**: Parameter optimization support
+- **Configurable Speed**: Accelerated or real-time replay
+- **Multi-timeframe**: Automatic candle aggregation
 
 ### Data Format
 CSV files should have the following format:
@@ -384,7 +391,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Version History
 - **v1.0.0**: Initial release with core grid and breakout trading
-- **v1.1.0**: Enhanced backtesting and optimization
+- **v1.1.0**: Enhanced streaming and historical replay capabilities
 - **v1.2.0**: Multi-exchange support (planned)
 
 ---

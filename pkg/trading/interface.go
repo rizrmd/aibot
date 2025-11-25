@@ -47,7 +47,7 @@ type TradingExecutor interface {
 
 // ExecutionConfig holds configuration for execution providers
 type ExecutionConfig struct {
-	ProviderType     string  `json:"provider_type"`     // "simulation", "live", "backtest"
+	ProviderType     string  `json:"provider_type"`     // "live"
 	Exchange         string  `json:"exchange"`          // "binance", "bybit", etc.
 	APIKey          string  `json:"api_key"`
 	APISecret       string  `json:"api_secret"`
@@ -61,20 +61,6 @@ type ExecutionConfig struct {
 	Slippage        float64 `json:"slippage"`          // Default slippage percentage
 }
 
-// SimulationConfig holds specific configuration for simulation execution
-type SimulationConfig struct {
-	ExecutionConfig
-	Balance          float64            `json:"balance"`
-	FilledOrders     []*types.Order     `json:"-"`           // Order history
-	Positions        map[string]*types.Position `json:"-"` // Current positions
-	OpenOrders       map[string]*types.Order     `json:"-"` // Current open orders
-	PriceFeed        <-chan types.Ticker          `json:"-"` // Price feed for simulation
-	Slippage         float64           `json:"slippage"`
-	Latency          time.Duration     `json:"latency"`
-	FillProbability  float64           `json:"fill_probability"` // Probability of limit order fill
-	PartialFillRate  float64           `json:"partial_fill_rate"` // Rate of partial fills
-	RejectionRate    float64           `json:"rejection_rate"`    // Order rejection rate
-}
 
 // LiveConfig holds specific configuration for live trading
 type LiveConfig struct {
@@ -87,16 +73,6 @@ type LiveConfig struct {
 	EnableHedging   bool          `json:"enable_hedging"`
 }
 
-// BacktestConfig holds specific configuration for backtesting
-type BacktestConfig struct {
-	ExecutionConfig
-	HistoricalData  map[string][]types.OHLCV `json:"-"` // Historical OHLCV data
-	StartDate       time.Time                `json:"start_date"`
-	EndDate         time.Time                `json:"end_date"`
-	InitialCapital  float64                  `json:"initial_capital"`
-	CommissionModel string                   `json:"commission_model"` // "percentage", "fixed", "tiered"
-	SlippageModel   string                   `json:"slippage_model"`   // "linear", "percentage", "random"
-}
 
 // MarginInfo contains margin information
 type MarginInfo struct {

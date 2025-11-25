@@ -38,7 +38,7 @@ type StreamProvider interface {
 
 // StreamConfig holds configuration for stream providers
 type StreamConfig struct {
-	ProviderType    string        `json:"provider_type"`    // "real", "simulation", "replay"
+	ProviderType    string        `json:"provider_type"`    // "live", "replay"
 	Exchange        string        `json:"exchange"`         // "binance", "bybit", etc.
 	APIKey          string        `json:"api_key"`
 	APISecret       string        `json:"api_secret"`
@@ -49,18 +49,6 @@ type StreamConfig struct {
 	BufferSize      int           `json:"buffer_size"`
 }
 
-// SimulationConfig holds specific configuration for simulation provider
-type SimulationConfig struct {
-	StreamConfig
-	SpeedMultiplier    float64                 `json:"speed_multiplier"`    // 1.0 = real-time, 2.0 = 2x speed
-	RandomVolatility   float64                 `json:"random_volatility"`   // 0.0 = no noise, 1.0 = high noise
-	InitialPrices      map[string]float64      `json:"initial_prices"`      // Starting prices for each symbol
-	VolatilityFactors  map[string]float64      `json:"volatility_factors"`  // Volatility multiplier per symbol
-	TrendFactors       map[string]float64      `json:"trend_factors"`       // Trend direction/strength per symbol
-	CandleInterval     time.Duration           `json:"candle_interval"`     // Base interval for OHLCV generation
-	MaxHistoryCandles  int                     `json:"max_history_candles"` // Max candles to keep in memory
-	Seed              int64                   `json:"seed"`                // Random seed for reproducibility
-}
 
 // RealStreamConfig holds specific configuration for real WebSocket providers
 type RealStreamConfig struct {

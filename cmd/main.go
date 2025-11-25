@@ -149,14 +149,8 @@ func initializeApplication() (*Application, error) {
 func (app *Application) run() error {
 	logger.Info("Application initialized successfully")
 
-	// Check if backtest mode is enabled
-	if cfg.App.Enabled {
-		logger.Info("Starting in backtest mode")
-		return app.runBacktest()
-	}
-
-	// Run live trading mode
-	logger.Info("Starting in live trading mode")
+	// Run trading mode (now handles all modes through streaming config)
+	logger.Info("Starting trading bot")
 	return app.runLiveTrading()
 }
 
@@ -191,16 +185,6 @@ func (app *Application) runLiveTrading() error {
 	return app.shutdown()
 }
 
-// runBacktest runs the backtest mode
-func (app *Application) runBacktest() error {
-	logger.Info("Starting backtest execution")
-	logger.Info("⚠️ Backtest mode is enabled but not fully implemented yet")
-	logger.Info("The bot will run in simulation mode instead")
-
-	// For now, run in simulation mode instead of full backtest
-	// TODO: Implement full backtest engine with historical data processing
-	return app.runLiveTrading()
-}
 
 // initializeComponents initializes all application components
 func (app *Application) initializeComponents(cfg *config.Config) error {
@@ -227,44 +211,43 @@ func (app *Application) initializeComponents(cfg *config.Config) error {
 func createStreamProvider(cfg config.StreamConfig) (stream.StreamProvider, error) {
 	factory := stream.NewStreamProviderFactory()
 
-	// Create simulation config
-	simConfig := stream.SimulationConfig{
+	// Create live config
+	liveConfig := stream.RealStreamConfig{
 		StreamConfig: stream.StreamConfig{
-			ProviderType: "simulation",
+			ProviderType: "live",
 			Symbols:      []string{"BTCUSDT"},
 		},
-		SpeedMultiplier:   cfg.SimulationSpeed,
-		RandomVolatility:  cfg.RandomVolatility,
-		InitialPrices:     map[string]float64{"BTCUSDT": 45000.0},
-		VolatilityFactors: map[string]float64{"BTCUSDT": 0.02},
-		CandleInterval:    300 * time.Millisecond,
-		MaxHistoryCandles: 100,
+		WSSURL:          "wss://api.binance.com/ws/btcusdt@ticker", // Default example
+		PingInterval:     20 * time.Second,
+		Timeout:          30 * time.Second,
+		Compression:      true,
+		RateLimitPerSec:  10,
 	}
 
-	return factory.CreateStreamProvider(simConfig)
+	return factory.CreateStreamProvider(liveConfig)
 }
 
 // createTradingExecutor creates the appropriate trading executor
 func createTradingExecutor(cfg config.TradingConfig) (trading.TradingExecutor, error) {
 	factory := trading.NewTradingExecutorFactory()
 
-	// Create simulation config
-	simConfig := trading.SimulationConfig{
+	// Create live config
+	liveConfig := trading.LiveConfig{
 		ExecutionConfig: trading.ExecutionConfig{
-			ProviderType:    "simulation",
+			ProviderType:    "live",
 			InitialBalance:  cfg.InitialBalance,
 			DefaultLeverage: cfg.DefaultLeverage,
 			Commission:      cfg.MakerFee + cfg.TakerFee,
 		},
-		Balance:          cfg.InitialBalance,
-		Slippage:         cfg.Slippage,
-		Latency:          100 * time.Millisecond,
-		FillProbability:  0.95,
-		PartialFillRate:  0.1,
-		RejectionRate:    0.01,
+		WSSURL:          "wss://api.binance.com/ws/btcusdt@trade",
+		RESTURL:         "https://api.binance.com/api/v3",
+		Timeout:         30 * time.Second,
+		RateLimitPerSec: 10,
+		UseTestNet:      true,
+		EnableHedging:   false,
 	}
 
-	return factory.CreateTradingExecutor(simConfig)
+	return factory.CreateTradingExecutor(liveConfig)
 }
 
 // convertToBotConfig converts app config to bot orchestrator config
@@ -326,11 +309,11 @@ func convertToBotConfig(cfg *config.Config) *bot.BotConfig {
 			VolatilityMultiplier: 1.5,
 		},
 		StreamConfig: stream.StreamConfig{
-			ProviderType: "simulation",
+			ProviderType: "live",
 			Symbols:      []string{cfg.Trading.DefaultSymbol},
 		},
 		TradingConfig: trading.ExecutionConfig{
-			ProviderType:    "simulation",
+			ProviderType:    "live",
 			InitialBalance:  cfg.Trading.InitialBalance,
 			DefaultLeverage: cfg.Trading.DefaultLeverage,
 			Commission:      cfg.Trading.MakerFee + cfg.Trading.TakerFee,
@@ -415,7 +398,6 @@ func ensureDirectories() error {
 	directories := []string{
 		"./logs",
 		"./data",
-		"./backtest_results",
 		"./config",
 	}
 

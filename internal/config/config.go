@@ -29,7 +29,6 @@ type AppConfig struct {
 	Environment string        `json:"environment"` // "development", "production", "test"
 	Timezone    string        `json:"timezone"`
 	Debug       bool          `json:"debug"`
-	Enabled     bool          `json:"enabled"`         // Backtest enabled
 	ShutdownTimeout time.Duration `json:"shutdown_timeout"`
 	MaxGoroutines   int       `json:"max_goroutines"`
 }
@@ -53,7 +52,7 @@ type TradingConfig struct {
 	Slippage          float64 `json:"slippage"`
 
 	// Execution settings
-	ExecutionType     string `json:"execution_type"` // "simulation", "live"
+	ExecutionType     string `json:"execution_type"` // "live"
 	OrderTimeout      time.Duration `json:"order_timeout"`
 	RetryAttempts     int    `json:"retry_attempts"`
 	RetryDelay        time.Duration `json:"retry_delay"`
@@ -212,7 +211,7 @@ type RiskConfig struct {
 // StreamConfig contains streaming data configuration
 type StreamConfig struct {
 	// Connection
-	ProviderType      string        `json:"provider_type"`       // "simulation", "binance", "bitmex"
+	ProviderType      string        `json:"provider_type"`       // "live", "replay"
 	ConnectTimeout    time.Duration `json:"connect_timeout"`
 	ReadTimeout       time.Duration `json:"read_timeout"`
 	WriteTimeout      time.Duration `json:"write_timeout"`
@@ -224,10 +223,6 @@ type StreamConfig struct {
 	BufferSize        int           `json:"buffer_size"`
 	BatchSize         int           `json:"batch_size"`
 	BatchTimeout      time.Duration `json:"batch_timeout"`
-
-	// Simulation (if using simulation provider)
-	SimulationSpeed   float64 `json:"simulation_speed"`   // 1.0 = real-time
-	RandomVolatility  float64 `json:"random_volatility"`  // 0.1 = 10% volatility
 }
 
 // DatabaseConfig contains database configuration
@@ -305,7 +300,6 @@ func DefaultConfig() *Config {
 			Environment: "development",
 			Timezone:    "UTC",
 			Debug:       true,
-			Enabled:     false,
 			ShutdownTimeout: 30 * time.Second,
 			MaxGoroutines:   100,
 		},
@@ -320,7 +314,7 @@ func DefaultConfig() *Config {
 			MakerFee:            0.0002, // 0.02%
 			TakerFee:            0.0006, // 0.06%
 			Slippage:            0.0005, // 0.05%
-			ExecutionType:       "simulation",
+			ExecutionType:       "live",
 			OrderTimeout:        30 * time.Second,
 			RetryAttempts:       3,
 			RetryDelay:          1 * time.Second,
@@ -408,7 +402,7 @@ func DefaultConfig() *Config {
 			EmergencyStopLoss:       0.15, // 15% portfolio loss
 		},
 		Stream: StreamConfig{
-			ProviderType:    "simulation",
+			ProviderType:    "live",
 			ConnectTimeout:  10 * time.Second,
 			ReadTimeout:     30 * time.Second,
 			WriteTimeout:    10 * time.Second,
@@ -418,8 +412,6 @@ func DefaultConfig() *Config {
 			BufferSize:      1000,
 			BatchSize:       100,
 			BatchTimeout:    1 * time.Second,
-			SimulationSpeed: 1.0,
-			RandomVolatility: 0.1,
 		},
 		Database: DatabaseConfig{
 			Driver:         "sqlite",
@@ -444,7 +436,7 @@ func DefaultConfig() *Config {
 			EnableStructured: true,
 			Fields:           []string{"timestamp", "level", "component", "message", "symbol", "price", "pnl"},
 		},
-		Backtest: BacktestConfig{
+	Backtest: BacktestConfig{
 			DataDirectory:      "./data",
 			StartTime:          time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 			EndTime:            time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC),
@@ -585,10 +577,7 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate backtest config
-	if c.App.Enabled {
-		if c.Backtest.DataDirectory == "" {
-			return fmt.Errorf("data directory is required for backtesting")
-		}
+	if c.Backtest.DataDirectory != "" {
 		if len(c.Backtest.Symbols) == 0 {
 			return fmt.Errorf("at least one symbol is required for backtesting")
 		}

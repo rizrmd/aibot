@@ -180,18 +180,6 @@ docs-serve: ## Serve documentation
 	@echo "Documentation available at: http://localhost:6060/pkg/"
 	godoc -http=:6060
 
-# Backtesting
-.PHONY: backtest
-backtest: build ## Run backtesting
-	@echo "Running backtest..."
-	@mkdir -p backtest_results
-	./$(BUILD_DIR)/$(APP_NAME) -config $(CONFIG_FILE) -backtest -start-date "2023-01-01" -end-date "2023-12-31"
-
-.PHONY: backtest-quick
-backtest-quick: ## Run quick backtest with sample data
-	@echo "Running quick backtest..."
-	@mkdir -p backtest_results
-	./$(BUILD_DIR)/$(APP_NAME) -config $(CONFIG_FILE) -backtest -quick
 
 # Database
 .PHONY: db-migrate
@@ -216,7 +204,6 @@ clean: ## Clean build artifacts
 clean-all: clean ## Clean all generated files
 	@rm -rf logs/
 	@rm -rf data/
-	@rm -rf backtest_results/
 	@rm -f *.log
 	@rm -f *.db
 

@@ -20,8 +20,6 @@ func (f *StreamProviderFactory) CreateStreamProvider(config interface{}) (Stream
 	switch c := config.(type) {
 	case StreamConfig:
 		providerType = c.ProviderType
-	case SimulationConfig:
-		providerType = c.ProviderType
 	case RealStreamConfig:
 		providerType = c.ProviderType
 	case ReplayConfig:
@@ -31,17 +29,10 @@ func (f *StreamProviderFactory) CreateStreamProvider(config interface{}) (Stream
 	}
 
 	switch providerType {
-	case "simulation":
-		simConfig, ok := config.(SimulationConfig)
-		if !ok {
-			return nil, fmt.Errorf("invalid configuration for simulation provider")
-		}
-		return NewSimulationProvider(simConfig), nil
-
-	case "real":
+	case "live":
 		realConfig, ok := config.(RealStreamConfig)
 		if !ok {
-			return nil, fmt.Errorf("invalid configuration for real provider")
+			return nil, fmt.Errorf("invalid configuration for live provider")
 		}
 		return f.createRealProvider(realConfig)
 
@@ -57,16 +48,14 @@ func (f *StreamProviderFactory) CreateStreamProvider(config interface{}) (Stream
 	}
 }
 
-// createRealProvider creates a real WebSocket provider
+// createRealProvider creates a live WebSocket provider
 func (f *StreamProviderFactory) createRealProvider(config RealStreamConfig) (StreamProvider, error) {
 	// This would be implemented for real exchanges like Binance, Bybit, etc.
-	// For now, we'll return a simulation provider as a placeholder
-	return nil, fmt.Errorf("real providers not implemented yet - use simulation for now")
+	return nil, fmt.Errorf("live providers not implemented yet - use replay for now")
 }
 
 // createReplayProvider creates a historical replay provider
 func (f *StreamProviderFactory) createReplayProvider(config ReplayConfig) (StreamProvider, error) {
 	// This would be implemented for historical data replay
-	// For now, we'll return a simulation provider as a placeholder
-	return nil, fmt.Errorf("replay providers not implemented yet - use simulation for now")
+	return nil, fmt.Errorf("replay providers not implemented yet")
 }
