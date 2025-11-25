@@ -18,6 +18,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -358,127 +359,223 @@ func (e *Engine) initializeComponents() error {
 	return nil
 }
 
-// loadHistoricalData loads historical OHLCV data
+// loadHistoricalData loads historical OHLCV data from CSV files
 func (e *Engine) loadHistoricalData() error {
 	if e.config.DataDirectory == "" {
-		return fmt.Errorf("data directory not specified")
+		return fmt.Errorf("data directory must be specified for backtesting")
 	}
 
-	// For now, create sample data if no directory specified
-	if e.config.DataDirectory == "sample" {
-		e.logger.Info("Generating sample historical data")
-		e.historicalData = e.generateSampleData()
-		e.symbols = []string{"BTCUSDT"}
-		return nil
+	if len(e.config.Symbols) == 0 {
+		e.config.Symbols = []string{"BTCUSDT"} // Default symbol
 	}
 
-	// Load from CSV file
-	csvFile := filepath.Join(e.config.DataDirectory, "BTCUSDT.csv")
-	file, err := os.Open(csvFile)
+	var allData []types.OHLCV
+	var loadedSymbols []string
+
+	// Load data for each symbol
+	for _, symbol := range e.config.Symbols {
+		symbolData, err := e.loadSymbolData(symbol)
+		if err != nil {
+			return fmt.Errorf("failed to load data for symbol %s: %w", symbol, err)
+		}
+
+		allData = append(allData, symbolData...)
+		loadedSymbols = append(loadedSymbols, symbol)
+	}
+
+	if len(allData) == 0 {
+		return fmt.Errorf("no historical data found for any symbols")
+	}
+
+	// Sort data by timestamp
+	e.historicalData = allData
+	e.symbols = loadedSymbols
+
+	e.logger.Infof("Loaded %d candles for %d symbols", len(e.historicalData), len(e.symbols))
+	return nil
+}
+
+// loadSymbolData loads data for a specific symbol
+func (e *Engine) loadSymbolData(symbol string) ([]types.OHLCV, error) {
+	// Try multiple CSV filename formats
+	csvFiles := []string{
+		filepath.Join(e.config.DataDirectory, symbol+".csv"),
+		filepath.Join(e.config.DataDirectory, strings.ToLower(symbol)+".csv"),
+		filepath.Join(e.config.DataDirectory, strings.ToUpper(symbol)+".csv"),
+		filepath.Join(e.config.DataDirectory, symbol+"_"+e.config.Timeframe+".csv"),
+	}
+
+	var file *os.File
+	var err error
+
+	// Try each possible filename
+	for _, csvFile := range csvFiles {
+		file, err = os.Open(csvFile)
+		if err == nil {
+			e.logger.Infof("Loading data from: %s", csvFile)
+			break
+		}
+	}
+
 	if err != nil {
-		e.logger.Warnf("Could not open data file %s, generating sample data: %v", csvFile, err)
-		e.historicalData = e.generateSampleData()
-		e.symbols = []string{"BTCUSDT"}
-		return nil
+		return nil, fmt.Errorf("CSV file not found for symbol %s (tried: %v)", symbol, csvFiles)
 	}
 	defer file.Close()
 
 	reader := csv.NewReader(file)
-	// Skip header
-	_, err = reader.Read()
+
+	// Read and validate header
+	header, err := reader.Read()
 	if err != nil {
-		return fmt.Errorf("failed to read CSV header: %w", err)
+		return nil, fmt.Errorf("failed to read CSV header: %w", err)
+	}
+
+	// Validate required columns
+	requiredColumns := []string{"timestamp", "open", "high", "low", "close", "volume"}
+	if !e.validateCSVHeader(header, requiredColumns) {
+		return nil, fmt.Errorf("invalid CSV header format. Required columns: %v", requiredColumns)
 	}
 
 	var data []types.OHLCV
+	lineNumber := 1
+
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("failed to read CSV record: %w", err)
+			return nil, fmt.Errorf("failed to read CSV record at line %d: %w", lineNumber, err)
 		}
+		lineNumber++
 
-		// Parse CSV record (timestamp, open, high, low, close, volume)
-		if len(record) < 6 {
+		// Skip empty records
+		if len(record) < len(requiredColumns) {
 			continue
 		}
 
-		timestamp, err := time.Parse("2006-01-02 15:04:05", record[0])
+		// Parse CSV record
+		candle, err := e.parseCSVRecord(record, symbol, requiredColumns)
 		if err != nil {
+			e.logger.Warnf("Skipping line %d due to parse error: %v", lineNumber, err)
 			continue
-		}
-
-		open, _ := parseFloat(record[1])
-		high, _ := parseFloat(record[2])
-		low, _ := parseFloat(record[3])
-		close, _ := parseFloat(record[4])
-		volume, _ := parseFloat(record[5])
-
-		candle := types.OHLCV{
-			Symbol:    "BTCUSDT",
-			Timestamp: timestamp,
-			Open:      open,
-			High:      high,
-			Low:       low,
-			Close:     close,
-			Volume:    volume,
 		}
 
 		// Filter by date range
-		if !timestamp.Before(e.config.StartTime) && !timestamp.After(e.config.EndTime) {
+		if !candle.Timestamp.Before(e.config.StartTime) && !candle.Timestamp.After(e.config.EndTime) {
 			data = append(data, candle)
 		}
 	}
 
 	if len(data) == 0 {
-		return fmt.Errorf("no data found in specified date range")
+		return nil, fmt.Errorf("no data found for symbol %s in specified date range %s to %s",
+			symbol, e.config.StartTime.Format("2006-01-02"), e.config.EndTime.Format("2006-01-02"))
 	}
 
-	e.historicalData = data
-	e.symbols = []string{"BTCUSDT"}
-	e.logger.Infof("Loaded %d candles from %s to %s", len(data),
+	e.logger.Infof("Loaded %d candles for %s from %s to %s",
+		len(data), symbol,
 		data[0].Timestamp.Format(time.RFC3339),
 		data[len(data)-1].Timestamp.Format(time.RFC3339))
 
-	return nil
+	return data, nil
 }
 
-// generateSampleData generates sample OHLCV data for testing
-func (e *Engine) generateSampleData() []types.OHLCV {
-	var data []types.OHLCV
-	currentTime := e.config.StartTime
-	basePrice := 45000.0
-	volatility := 0.02 // 2%
-
-	for currentTime.Before(e.config.EndTime) {
-		// Generate realistic price movement
-		priceChange := (randFloat()*2-1) * volatility * basePrice
-		open := basePrice + priceChange
-
-		high := open * (1 + randFloat()*0.005) // Up to 0.5% above open
-		low := open * (1 - randFloat()*0.005)  // Up to 0.5% below open
-		close := open + (randFloat()*2-1) * volatility * basePrice * 0.1
-		volume := 1000 + randFloat()*2000
-
-		candle := types.OHLCV{
-			Symbol:    "BTCUSDT",
-			Timestamp: currentTime,
-			Open:      open,
-			High:      high,
-			Low:       low,
-			Close:     close,
-			Volume:    volume,
-		}
-
-		data = append(data, candle)
-		basePrice = close // Use close as next base
-		currentTime = currentTime.Add(1 * time.Minute) // 1-minute candles
+// validateCSVHeader validates that CSV contains required columns
+func (e *Engine) validateCSVHeader(header []string, required []string) bool {
+	if len(header) < len(required) {
+		return false
 	}
 
-	return data
+	headerLower := make([]string, len(header))
+	for i, h := range header {
+		headerLower[i] = strings.ToLower(strings.TrimSpace(h))
+	}
+
+	for _, req := range required {
+		found := false
+		for _, h := range headerLower {
+			if h == req {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	return true
 }
+
+// parseCSVRecord parses a single CSV record into OHLCV data
+func (e *Engine) parseCSVRecord(record []string, symbol string, columns []string) (types.OHLCV, error) {
+	var timestamp time.Time
+	var open, high, low, close, volume float64
+	var err error
+
+	// Try different timestamp formats
+	timestampStr := record[0]
+	timestampFormats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05Z",
+		"2006-01-02T15:04:05.000Z",
+		"2006-01-02 15:04:05.000",
+		time.RFC3339,
+		"2006/01/02 15:04:05",
+	}
+
+	for _, format := range timestampFormats {
+		timestamp, err = time.Parse(format, timestampStr)
+		if err == nil {
+			break
+		}
+	}
+
+	if err != nil {
+		return types.OHLCV{}, fmt.Errorf("invalid timestamp format: %s", timestampStr)
+	}
+
+	open, err = parseFloat(record[1])
+	if err != nil {
+		return types.OHLCV{}, fmt.Errorf("invalid open price: %s", record[1])
+	}
+
+	high, err = parseFloat(record[2])
+	if err != nil {
+		return types.OHLCV{}, fmt.Errorf("invalid high price: %s", record[2])
+	}
+
+	low, err = parseFloat(record[3])
+	if err != nil {
+		return types.OHLCV{}, fmt.Errorf("invalid low price: %s", record[3])
+	}
+
+	close, err = parseFloat(record[4])
+	if err != nil {
+		return types.OHLCV{}, fmt.Errorf("invalid close price: %s", record[4])
+	}
+
+	volume, err = parseFloat(record[5])
+	if err != nil {
+		return types.OHLCV{}, fmt.Errorf("invalid volume: %s", record[5])
+	}
+
+	// Validate OHLC relationships
+	if high < low || high < open || high < close || low > open || low > close {
+		return types.OHLCV{}, fmt.Errorf("invalid OHLC relationships: O=%.2f H=%.2f L=%.2f C=%.2f", open, high, low, close)
+	}
+
+	return types.OHLCV{
+		Symbol:    symbol,
+		Timestamp: timestamp,
+		Open:      open,
+		High:      high,
+		Low:       low,
+		Close:     close,
+		Volume:    volume,
+	}, nil
+}
+
 
 // Run executes the backtest
 func (e *Engine) Run() (*BacktestResults, error) {
@@ -918,7 +1015,3 @@ func average(values []float64) float64 {
 	return sum / float64(len(values))
 }
 
-func randFloat() float64 {
-	// Simple random float implementation
-	return float64(time.Now().UnixNano()%1000) / 1000.0
-}

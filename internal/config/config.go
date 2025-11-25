@@ -279,6 +279,8 @@ type BacktestConfig struct {
 	DataDirectory      string        `json:"data_directory"`
 	StartTime         time.Time     `json:"start_time"`
 	EndTime           time.Time     `json:"end_time"`
+	Symbols           []string      `json:"symbols"`
+	Timeframe         string        `json:"timeframe"`
 	InitialBalance    float64       `json:"initial_balance"`
 
 	// Execution
@@ -291,6 +293,7 @@ type BacktestConfig struct {
 	DetailedReports    bool          `json:"detailed_reports"`
 	GenerateCharts     bool          `json:"generate_charts"`
 	ExportTrades       bool          `json:"export_trades"`
+	ExportPerformance  bool          `json:"export_performance"`
 }
 
 // DefaultConfig returns a default configuration
@@ -442,14 +445,20 @@ func DefaultConfig() *Config {
 			Fields:           []string{"timestamp", "level", "component", "message", "symbol", "price", "pnl"},
 		},
 		Backtest: BacktestConfig{
-			InitialBalance:    10000.0,
-			Commission:        0.0004, // 0.04% (average of maker/taker)
-			Slippage:          0.0005, // 0.05%
-			Latency:           50 * time.Millisecond,
-			ResultsDirectory:  "./backtest_results",
-			DetailedReports:   true,
-			GenerateCharts:    true,
-			ExportTrades:      true,
+			DataDirectory:      "./data",
+			StartTime:          time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			EndTime:            time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC),
+			Symbols:            []string{"BTCUSDT"},
+			Timeframe:          "1m",
+			InitialBalance:     10000.0,
+			Commission:         0.0004, // 0.04% (average of maker/taker)
+			Slippage:           0.0005, // 0.05%
+			Latency:            50 * time.Millisecond,
+			ResultsDirectory:   "./backtest_results",
+			DetailedReports:    true,
+			GenerateCharts:     true,
+			ExportTrades:       true,
+			ExportPerformance:  true,
 		},
 	}
 }
@@ -573,6 +582,28 @@ func (c *Config) Validate() error {
 	}
 	if !formatValid {
 		return fmt.Errorf("invalid log format: %s", c.Logging.Format)
+	}
+
+	// Validate backtest config
+	if c.App.Enabled {
+		if c.Backtest.DataDirectory == "" {
+			return fmt.Errorf("data directory is required for backtesting")
+		}
+		if len(c.Backtest.Symbols) == 0 {
+			return fmt.Errorf("at least one symbol is required for backtesting")
+		}
+		if c.Backtest.StartTime.IsZero() {
+			return fmt.Errorf("start time is required for backtesting")
+		}
+		if c.Backtest.EndTime.IsZero() {
+			return fmt.Errorf("end time is required for backtesting")
+		}
+		if c.Backtest.EndTime.Before(c.Backtest.StartTime) {
+			return fmt.Errorf("end time must be after start time for backtesting")
+		}
+		if c.Backtest.InitialBalance <= 0 {
+			return fmt.Errorf("initial balance must be positive for backtesting")
+		}
 	}
 
 	return nil
